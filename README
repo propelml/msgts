@@ -1,0 +1,6 @@
+
+
+gn gen out/Debug --args='cc_wrapper="ccache" is_debug=true '
+gn gen out/Default --args='cc_wrapper="ccache" '
+
+ninja -C out/Debug/

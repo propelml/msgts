@@ -5,24 +5,38 @@
 import os
 import sys
 import subprocess
+import argparse
+
+TARGET = "xhello"
+
+parser = argparse.ArgumentParser(description="build.py")
+parser.add_argument('--debug', dest='debug', action='store_true')
+parser.add_argument('--use_ccache', dest='use_ccache', action='store_true')
+parser.add_argument('--sync', dest='sync', action='store_true')
+parser.set_defaults(debug=False, use_ccache=False, sync=False)
+args = parser.parse_args()
 
 
 def main():
-    is_debug = "--debug" in sys.argv
-    buildDir = "out/Debug" if is_debug else "out/Default"
+    buildDir = "out/Debug" if args.debug else "out/Default"
     # Run sync if any of the dep dirs don't exist.
     # Or the user supplied the --sync flag.
-    if "--sync" in sys.argv or dirsMissing():
+    if args.sync or dirsMissing():
         run("gclient sync --no-history")
 
     # Run gn gen out/Default if out doesn't exist.
     if not os.path.exists(buildDir):
-        # How do I auto set is_debug=true for out/Debug?
         gn_gen = "gn gen " + buildDir
+        gn_args = []
+        if debug:
+            gn_args.append("is_debug=true")
+        if use_ccache:
+            gn_args.append("cc_wraper=\"ccache\"")
+        gn_gen += " --args='%s' " % " ".join(gn_args)
         run(gn_gen)
 
     # Always run ninja.
-    run("ninja -C " + buildDir)
+    run("ninja -C " + buildDir + " " + TARGET)
 
 
 def run(cmd):

@@ -1,4 +1,5 @@
 import("//third_party/protobuf/proto_library.gni")
+import("//v8/gni/v8.gni")
 
 proto_library("msg_proto") {
   sources = [
@@ -6,18 +7,44 @@ proto_library("msg_proto") {
   ]
 }
 
+# action("bundle") {
+#   script = "node_modules/.bin/parcel"
+#   sources = [ "main.ts" ]
+#   outputs = [ "$target_gen_dir/main.js", "$target_gen_dir/main.map" ]
+#
+#   # Our script imports this Python file so we want to rebuild if it changes.
+#   # inputs = [ "helper_library.py" ]
+#
+#   # Note that we have to manually pass the sources to our script if the
+#   # script needs them as inputs.
+#   args = [
+#     "bundle",
+#     "--log-level=1",
+#     "--no-minify",
+#     "--out_dir=" + rebase_path(target_gen_dir, root_build_dir)
+#   ] + rebase_path(sources, root_build_dir)
+# }
+
 #v8_extra_library_files += [
 #  "dist/main.js"
 #]
 
-executable("hello") {
+v8_executable("xhello") {
   sources = [
     "binding.cc",
     "binding.h",
     "main.cc",
   ]
+  configs = [ "v8:libplatform_config" ]
+  #configs = [ "v8:external_config" ]
   deps = [
     ":msg_proto",
-    "v8:v8",
+    #"v8:v8",
+    #"v8:v8_libbase",
+    "v8:v8_monolith",
+    #"//build/config:exe_and_shlib_deps",
+    #"//build/win:default_exe_manifest",
   ]
 }
+
+#"v8:v8_monolith",
