@@ -28,7 +28,7 @@ def main():
     if not os.path.exists(buildDir):
         gn_gen = "gn gen " + buildDir
         gn_args = []
-        if debug:
+        if args.debug:
             gn_args.append("is_debug=true")
         if use_ccache:
             gn_args.append("cc_wraper=\"ccache\"")
