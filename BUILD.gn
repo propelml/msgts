@@ -1,14 +1,18 @@
 #import("//third_party/protobuf/proto_library.gni")
 #
-#
 #proto_library("msg_proto") {
 #  sources = [
 #    "msg.proto",
 #  ]
 #}
 
+import("//config.gni")
+
 executable("hello") {
   sources = [
     "hello.cc",
+  ]
+  deps = [
+    "v8:v8_monolith"
   ]
 }
