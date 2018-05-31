@@ -8,17 +8,21 @@ import subprocess
 
 
 def main():
+    is_debug = "--debug" in sys.argv
+    buildDir = "out/Debug" if is_debug else "out/Default"
     # Run sync if any of the dep dirs don't exist.
     # Or the user supplied the --sync flag.
     if "--sync" in sys.argv or dirsMissing():
         run("gclient sync --no-history")
 
     # Run gn gen out/Default if out doesn't exist.
-    if not os.path.exists("out/Default"):
-        run("gn gen out/Default")
+    if not os.path.exists(buildDir):
+        # How do I auto set is_debug=true for out/Debug?
+        gn_gen = "gn gen " + buildDir
+        run(gn_gen)
 
     # Always run ninja.
-    run("ninja -C out/Default")
+    run("ninja -C " + buildDir)
 
 
 def run(cmd):
