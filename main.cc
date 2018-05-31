@@ -3,8 +3,8 @@
 #include "binding.h"
 #include "v8/include/v8.h"
 
-int main() {
-  v8_init();
+int main(int argc, char** argv) {
+  v8_init(argc, argv);
 
   printf("after v8_init \n");
   Worker* w = worker_new(NULL, NULL);

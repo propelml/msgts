@@ -245,10 +245,16 @@ int worker_send(Worker* w, WorkerBuf buf) {
   return 0;
 }
 
-void v8_init() {
+void v8_init(int argc, char** argv) {
   // V8::InitializeExternalStartupData(argv[0]);
-  std::unique_ptr<Platform> pl = platform::NewDefaultPlatform();
-  V8::InitializePlatform(pl.get());
+  //std::unique_ptr<Platform> pl = platform::NewDefaultPlatform();
+  //V8::InitializePlatform(pl.get());
+  //V8::Initialize();
+
+  V8::InitializeICUDefaultLocation(argv[0]);
+  V8::InitializeExternalStartupData(argv[0]);
+  auto platform = platform::NewDefaultPlatform();
+  V8::InitializePlatform(platform.get());
   V8::Initialize();
 }
 
