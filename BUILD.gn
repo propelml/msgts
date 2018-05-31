@@ -1,0 +1,14 @@
+#import("//third_party/protobuf/proto_library.gni")
+#
+#
+#proto_library("msg_proto") {
+#  sources = [
+#    "msg.proto",
+#  ]
+#}
+
+executable("hello") {
+  sources = [
+    "hello.cc",
+  ]
+}
