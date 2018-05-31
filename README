@@ -1,6 +1,11 @@
+./build.py # my wrapper around the gclient/gn/ninja
 
-
+# Configure
 gn gen out/Debug --args='cc_wrapper="ccache" is_debug=true '
 gn gen out/Default --args='cc_wrapper="ccache" '
 
-ninja -C out/Debug/
+# Build
+ninja -C out/Debug/ xhello
+
+# List args
+gn args out/Default/ --list

@@ -30,7 +30,7 @@ def main():
         gn_args = []
         if args.debug:
             gn_args.append("is_debug=true")
-        if use_ccache:
+        if args.use_ccache:
             gn_args.append("cc_wraper=\"ccache\"")
         gn_gen += " --args='%s' " % " ".join(gn_args)
         run(gn_gen)
