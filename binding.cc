@@ -59,7 +59,8 @@ void HandleException(Worker* w, Local<Value> exception) {
     func->Call(context->Global(), 5, args);
     /* message, source, lineno, colno, error */
   } else {
-    printf("Unhandled Exception\n");
+    String::Utf8Value exceptionStr(w->isolate, exception);
+    printf("Unhandled Exception %s\n", ToCString(exceptionStr));
     message->PrintCurrentStackTrace(w->isolate, stdout);
   }
 

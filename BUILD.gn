@@ -53,15 +53,21 @@ template("create_snapshot") {
     data = []
     exe = rebase_path(get_label_info(":snapshot_creator", "root_out_dir") +
                       "/snapshot_creator")
-    out = "$target_gen_dir/snapshot${suffix}.cc"
+    natives_in_bin = "$root_out_dir/natives_blob.bin"
+    snapshot_in_bin = "$root_out_dir/snapshot_blob.bin"
+    natives_out_cc = "$target_gen_dir/natives${suffix}.cc"
+    snapshot_out_cc = "$target_gen_dir/snapshot${suffix}.cc"
     outputs = [
-      out,
+      natives_out_cc,
+      snapshot_out_cc,
     ]
     args = [
       exe,
-      rebase_path("$target_gen_dir", root_build_dir),
       rebase_path(invoker.js, root_build_dir),
-      rebase_path(out, root_build_dir),
+      rebase_path(natives_in_bin, root_build_dir),
+      rebase_path(snapshot_in_bin, root_build_dir),
+      rebase_path(natives_out_cc, root_build_dir),
+      rebase_path(snapshot_out_cc, root_build_dir),
     ]
     data = [
       invoker.js,
@@ -96,11 +102,11 @@ v8_executable("snapshot_creator") {
 
 v8_executable("xhello") {
   sources = [
-    "$target_gen_dir/snapshot_deno.cc",
     "binding.cc",
     "binding.h",
     "main.cc",
   ]
+  include_dirs = [ target_gen_dir ]
   configs = [ "v8:libplatform_config" ]
   deps = [
     ":create_snapshot_deno",
