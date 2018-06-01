@@ -1,0 +1,21 @@
+
+
+
+
+2015 Custom startup snapshots
+https://v8project.blogspot.com/2015/09/custom-startup-snapshots.html
+
+2017 Energizing Atom with V8's custom start-up snapshot
+https://v8project.blogspot.com/2017/05/energizing-atom-with-v8s-custom-start.html
+
+2017 Native functions can be included in the snapshot with newer V8.
+https://github.com/atom/electron-link/issues/1
+
+2017 Design doc: embedder provided object templates in context snapshot
+https://docs.google.com/document/d/1NBmPxgkKuipRZFAzq2IQTDM4qzouyIMh_DfqPaIw1hE/edit
+
+2017 Serializing internal fields in V8
+https://docs.google.com/document/d/1wIbujf-bgQUkrM0pMUCRn57oOw8ErFOMQG35sbZrWLU/edit
+
+
+

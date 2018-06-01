@@ -1,5 +1,7 @@
 out/
+.cache/
 v8/
+node_modules/
 tools/protoc_wrapper/
 third_party/protobuf/
 third_party/zlib/

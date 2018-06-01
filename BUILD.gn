@@ -1,5 +1,6 @@
 import("//third_party/protobuf/proto_library.gni")
 import("//v8/gni/v8.gni")
+import("//v8/snapshot_toolchain.gni")
 
 proto_library("msg_proto") {
   sources = [
@@ -7,39 +8,96 @@ proto_library("msg_proto") {
   ]
 }
 
-# action("bundle") {
-#   script = "node_modules/.bin/parcel"
-#   sources = [ "main.ts" ]
-#   outputs = [ "$target_gen_dir/main.js", "$target_gen_dir/main.map" ]
-#
-#   # Our script imports this Python file so we want to rebuild if it changes.
-#   # inputs = [ "helper_library.py" ]
-#
-#   # Note that we have to manually pass the sources to our script if the
-#   # script needs them as inputs.
-#   args = [
-#     "bundle",
-#     "--log-level=1",
-#     "--no-minify",
-#     "--out_dir=" + rebase_path(target_gen_dir, root_build_dir)
-#   ] + rebase_path(sources, root_build_dir)
-# }
+action("run_parcel") {
+  sources = [ "main.ts" ]
+  outputs = [
+    "$target_gen_dir/main.js",
+    "$target_gen_dir/main.map",
+  ]
 
-#v8_extra_library_files += [
-#  "dist/main.js"
-#]
+  # Our script imports this Python file so we want to rebuild if it changes.
+  # inputs = [ "helper_library.py" ]
+
+  # Note that we have to manually pass the sources to our script if the
+  # script needs them as inputs.
+  script = "run_node.py"
+  root = root_build_dir + "/../.."
+  args = [
+    "./node_modules/.bin/parcel",
+    "build",
+    "--log-level=1",
+    "--no-minify",
+    "--out-dir=" + rebase_path(target_gen_dir, root)
+  ] + rebase_path(sources, root)
+}
+
+# Template to generate different V8 snapshots based on different runtime flags.
+# Can be invoked with run_mksnapshot(<name>). The target will resolve to
+# run_mksnapshot_<name>. If <name> is "default", no file suffixes will be used.
+# Otherwise files are suffixed, e.g. embedded_<name>.cc and
+# snapshot_blob_<name>.bin.
+#
+# The template exposes the variables:
+#   args: additional flags for mksnapshots
+#   embedded_suffix: a camel case suffix for method names in the embedded
+#       snapshot.
+template("run_mksnapshot") {
+  name = target_name
+  suffix = "_$name"
+  action("run_mksnapshot_" + name) {
+    visibility = [ ":*" ]  # Only targets in this file can depend on this.
+
+    deps = [
+      "//v8:mksnapshot($v8_snapshot_toolchain)",
+    ] + invoker.deps
+
+    script = "v8/tools/run.py"
+
+    sources = []
+
+    outputs = []
+
+    data = []
+
+    args = [
+      "./" + rebase_path(get_label_info(":mksnapshot($v8_snapshot_toolchain)",
+                                        "root_out_dir") + "/mksnapshot",
+                         root_build_dir),
+      "--turbo_instruction_scheduling",
+    ]
+
+    outputs += [ "$target_gen_dir/snapshot${suffix}.cc" ]
+    args += [
+      "--startup_src",
+      rebase_path("$target_gen_dir/snapshot${suffix}.cc", root_build_dir),
+    ]
+
+    sources += [ invoker.js ]
+    args += [ rebase_path(invoker.js, root_build_dir) ]
+  }
+}
+
+# Generates $target_gen_dir/snapshot_bundle.cc
+run_mksnapshot("bundle") {
+  js = "$target_gen_dir/main.js"
+  deps = [
+    ":run_parcel"
+  ]
+}
 
 v8_executable("xhello") {
   sources = [
     "binding.cc",
     "binding.h",
     "main.cc",
+    "$target_gen_dir/snapshot_bundle.cc",
   ]
   configs = [ "v8:libplatform_config" ]
 
   #configs = [ "v8:external_config" ]
   deps = [
     ":msg_proto",
+    ":run_mksnapshot_bundle",
 
     #"v8:v8",
     #"v8:v8_libbase",

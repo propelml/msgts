@@ -38,7 +38,6 @@ default_args = {
   v8_enable_i18n_support = false
   v8_enable_test_features = false
   v8_experimental_extra_library_files = []
-  v8_extra_library_files = []
   v8_imminent_deprecation_warnings = false
   v8_monolithic = true
   v8_static_library = false
@@ -46,4 +45,12 @@ default_args = {
   v8_untrusted_code_mitigations = false
   v8_use_external_startup_data = false
   v8_use_snapshot = true
+
+  # Snapshot the dist/main.js bundle into V8.
+  # Is ".gn" really the most appropriate place to specify this important
+  # value? This is how they do it in Chrome.
+  # https://cs.chromium.org/chromium/src/.gn?l=37&rcl=f1c8c3cf8bd4a63da6433ee67e2ff5ecbbdb4316
+  v8_extra_library_files = []
+  #  "$target_gen_dir/main.js"
+  #]
 }
