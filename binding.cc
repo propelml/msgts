@@ -32,15 +32,6 @@ IN THE SOFTWARE.
 
 using namespace v8;
 
-struct worker_s {
-  Isolate* isolate;
-  std::string last_exception;
-  Persistent<Function> recv;
-  Persistent<Context> context;
-  RecvCallback cb;
-  void* data;
-};
-
 // Extracts a C string from a V8 Utf8Value.
 const char* ToCString(const String::Utf8Value& value) {
   return *value ? *value : "<string conversion failed>";
@@ -259,11 +250,23 @@ Worker* worker_new(void* data, RecvCallback cb) {
   Worker* w = new Worker;
   w->cb = cb;
   w->data = data;
-
   Isolate::CreateParams create_params;
   create_params.array_buffer_allocator =
       ArrayBuffer::Allocator::NewDefaultAllocator();
   Isolate* isolate = Isolate::New(create_params);
+  worker_add_isolate(w, isolate);
+  return w;
+}
+
+Worker* worker_from_isolate(Isolate* isolate, void* data, RecvCallback cb) {
+  Worker* w = new Worker;
+  w->cb = cb;
+  w->data = data;
+  worker_add_isolate(w, isolate);
+  return w;
+}
+
+void worker_add_isolate(Worker* w, Isolate* isolate) {
   // Locker locker(isolate);
   Isolate::Scope isolate_scope(isolate);
   HandleScope handle_scope(isolate);
@@ -279,8 +282,9 @@ Worker* worker_new(void* data, RecvCallback cb) {
   w->isolate->SetData(0, w);
 
   Local<ObjectTemplate> global = ObjectTemplate::New(w->isolate);
-  Local<ObjectTemplate> v8worker2 = ObjectTemplate::New(w->isolate);
 
+  /*
+  Local<ObjectTemplate> v8worker2 = ObjectTemplate::New(w->isolate);
   global->Set(String::NewFromUtf8(w->isolate, "V8Worker2"), v8worker2);
 
   v8worker2->Set(String::NewFromUtf8(w->isolate, "print"),
@@ -291,11 +295,10 @@ Worker* worker_new(void* data, RecvCallback cb) {
 
   v8worker2->Set(String::NewFromUtf8(w->isolate, "send"),
                  FunctionTemplate::New(w->isolate, Send));
+  */
 
   Local<Context> context = Context::New(w->isolate, NULL, global);
   w->context.Reset(w->isolate, context);
-
-  return w;
 }
 
 void worker_dispose(Worker* w) {

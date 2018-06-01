@@ -9,7 +9,9 @@ proto_library("msg_proto") {
 }
 
 action("run_parcel") {
-  sources = [ "main.ts" ]
+  sources = [
+    "main.ts",
+  ]
   outputs = [
     "$target_gen_dir/main.js",
     "$target_gen_dir/main.map",
@@ -23,12 +25,12 @@ action("run_parcel") {
   script = "run_node.py"
   root = root_build_dir + "/../.."
   args = [
-    "./node_modules/.bin/parcel",
-    "build",
-    "--log-level=1",
-    "--no-minify",
-    "--out-dir=" + rebase_path(target_gen_dir, root)
-  ] + rebase_path(sources, root)
+           "./node_modules/.bin/parcel",
+           "build",
+           "--log-level=1",
+           "--no-minify",
+           "--out-dir=" + rebase_path(target_gen_dir, root),
+         ] + rebase_path(sources, root)
 }
 
 # Template to generate different V8 snapshots based on different runtime flags.
@@ -41,47 +43,54 @@ action("run_parcel") {
 #   args: additional flags for mksnapshots
 #   embedded_suffix: a camel case suffix for method names in the embedded
 #       snapshot.
-template("run_mksnapshot") {
+template("create_snapshot") {
   name = target_name
   suffix = "_$name"
-  action("run_mksnapshot_" + name) {
+  action("create_snapshot_" + name) {
     visibility = [ ":*" ]  # Only targets in this file can depend on this.
-
-    deps = [
-      "//v8:mksnapshot($v8_snapshot_toolchain)",
-    ] + invoker.deps
-
+    deps = [ ":snapshot_creator" ] + invoker.deps
     script = "v8/tools/run.py"
-
-    sources = []
-
-    outputs = []
-
     data = []
-
+    exe = rebase_path(get_label_info(":snapshot_creator", "root_out_dir") +
+                      "/snapshot_creator")
+    out = "$target_gen_dir/snapshot${suffix}.bin"
+    outputs = [
+      out,
+    ]
     args = [
-      "./" + rebase_path(get_label_info(":mksnapshot($v8_snapshot_toolchain)",
-                                        "root_out_dir") + "/mksnapshot",
-                         root_build_dir),
-      "--turbo_instruction_scheduling",
+      exe,
+      rebase_path("$target_gen_dir", root_build_dir),
+      rebase_path(invoker.js, root_build_dir),
+      rebase_path(out, root_build_dir),
     ]
-
-    outputs += [ "$target_gen_dir/snapshot${suffix}.cc" ]
-    args += [
-      "--startup_src",
-      rebase_path("$target_gen_dir/snapshot${suffix}.cc", root_build_dir),
+    data = [
+      invoker.js,
     ]
-
-    sources += [ invoker.js ]
-    args += [ rebase_path(invoker.js, root_build_dir) ]
   }
 }
 
 # Generates $target_gen_dir/snapshot_bundle.cc
-run_mksnapshot("bundle") {
+create_snapshot("bundle") {
   js = "$target_gen_dir/main.js"
   deps = [
-    ":run_parcel"
+    ":run_parcel",
+  ]
+}
+
+v8_executable("snapshot_creator") {
+  sources = [
+    "binding.cc",
+    "binding.h",
+    "snapshot_creator.cc",
+  ]
+  configs = [ "v8:libplatform_config" ]
+  deps = [
+    "v8:v8",
+    "v8:v8_libbase",
+    "v8:v8_libplatform",
+    "v8:v8_libsampler",
+    "//build/config:exe_and_shlib_deps",
+    "//build/win:default_exe_manifest",
   ]
 }
 
@@ -90,18 +99,25 @@ v8_executable("xhello") {
     "binding.cc",
     "binding.h",
     "main.cc",
-    "$target_gen_dir/snapshot_bundle.cc",
+
+    #"$target_gen_dir/snapshot_bundle.cc",
   ]
   configs = [ "v8:libplatform_config" ]
 
   #configs = [ "v8:external_config" ]
   deps = [
+    ":create_snapshot_bundle",
     ":msg_proto",
-    ":run_mksnapshot_bundle",
 
     #"v8:v8",
     #"v8:v8_libbase",
-    "v8:v8_monolith",
+    #"v8:v8_monolith",
+    "v8:v8",
+    "v8:v8_libbase",
+    "v8:v8_libplatform",
+    "v8:v8_libsampler",
+    "//build/config:exe_and_shlib_deps",
+    "//build/win:default_exe_manifest",
 
     #"//build/config:exe_and_shlib_deps",
     #"//build/win:default_exe_manifest",
