@@ -6,8 +6,7 @@
 extern "C" {
 #endif
 
-//void v8_init();
-void v8_init(int argc, char** argv);
+void v8_init();
 const char* v8_version();
 void v8_set_flags(int* argc, char** argv);
 

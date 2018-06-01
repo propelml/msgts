@@ -50,6 +50,7 @@ const char* ToCString(const String::Utf8Value& value) {
 void HandleException(Worker* w, Local<Value> exception) {
   HandleScope handle_scope(w->isolate);
   auto context = w->context.Get(w->isolate);
+  Context::Scope context_scope(context);
 
   auto message = Exception::CreateMessage(w->isolate, exception);
   auto onerrorStr = String::NewFromUtf8(w->isolate, "onerror");
@@ -220,6 +221,7 @@ int worker_send(Worker* w, WorkerBuf buf) {
   HandleScope handle_scope(w->isolate);
 
   auto context = w->context.Get(w->isolate);
+  Context::Scope context_scope(context);
 
   TryCatch try_catch(w->isolate);
 
@@ -245,32 +247,23 @@ int worker_send(Worker* w, WorkerBuf buf) {
   return 0;
 }
 
-void v8_init(int argc, char** argv) {
+void v8_init() {
+  // V8::InitializeICUDefaultLocation(argv[0]);
   // V8::InitializeExternalStartupData(argv[0]);
-  //std::unique_ptr<Platform> pl = platform::NewDefaultPlatform();
-  //V8::InitializePlatform(pl.get());
-  //V8::Initialize();
-
-  V8::InitializeICUDefaultLocation(argv[0]);
-  V8::InitializeExternalStartupData(argv[0]);
-  auto platform = platform::NewDefaultPlatform();
-  V8::InitializePlatform(platform.get());
+  auto p = platform::CreateDefaultPlatform();
+  V8::InitializePlatform(p);
   V8::Initialize();
 }
 
 Worker* worker_new(void* data, RecvCallback cb) {
-  printf("1\n");
   Worker* w = new Worker;
-  printf("2\n");
   w->cb = cb;
   w->data = data;
 
-  printf("3\n");
   Isolate::CreateParams create_params;
   create_params.array_buffer_allocator =
       ArrayBuffer::Allocator::NewDefaultAllocator();
   Isolate* isolate = Isolate::New(create_params);
-  printf("4\n");
   // Locker locker(isolate);
   Isolate::Scope isolate_scope(isolate);
   HandleScope handle_scope(isolate);
@@ -301,7 +294,6 @@ Worker* worker_new(void* data, RecvCallback cb) {
 
   Local<Context> context = Context::New(w->isolate, NULL, global);
   w->context.Reset(w->isolate, context);
-  context->Enter();
 
   return w;
 }
