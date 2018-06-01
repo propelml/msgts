@@ -32,7 +32,8 @@ def main():
             gn_args.append("is_debug=true")
         if args.use_ccache:
             gn_args.append("cc_wraper=\"ccache\"")
-        gn_gen += " --args='%s' " % " ".join(gn_args)
+        if len(gn_args) > 0:
+            gn_gen += " --args='%s' " % " ".join(gn_args)
         run(gn_gen)
 
     # Always run ninja.
