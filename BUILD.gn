@@ -10,7 +10,7 @@ proto_library("msg_proto") {
 
 action("run_parcel") {
   sources = [
-    "main.ts",
+    "js/main.ts",
   ]
   outputs = [
     "$target_gen_dir/main.js",
@@ -22,8 +22,8 @@ action("run_parcel") {
 
   # Note that we have to manually pass the sources to our script if the
   # script needs them as inputs.
-  script = "tools/run_node.py"
-  root = root_build_dir + "/../.."
+  script = "js/run_node.py"
+  root = root_build_dir + "/../../js"
   args = [
            "./node_modules/.bin/parcel",
            "build",
