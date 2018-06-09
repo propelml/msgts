@@ -129,6 +129,6 @@ executable("deno_cctest") {
     "cctest.cc",
   ]
   deps = [
-    "v8/third_party/googletest:gtest",
+    "//testing/gtest:gtest",
   ]
 }

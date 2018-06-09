@@ -1,9 +1,12 @@
-#include "deno.h"
-#include "v8/third_party/googletest/src/googletest/include/gtest/gtest.h"
+// Copyright 2018 Ryan Dahl <ry@tinyclouds.org>
+// All rights reserved. MIT License.
+#include "testing/gtest/include/gtest/gtest.h"
+
+#include "./deno.h"
 
 TEST(SnapshotTest, InitializesCorrectly) {
   EXPECT_TRUE(true);
-  // TODO add actual tests
+  // TODO(ry) add actual tests
 }
 
 int main(int argc, char** argv) {

@@ -1,7 +1,7 @@
 // Copyright 2018 Ryan Dahl <ry@tinyclouds.org>
 // All rights reserved. MIT License.
-#ifndef DENO_H
-#define DENO_H
+#ifndef DENO_H_
+#define DENO_H_
 
 #include <string>
 #include "v8/include/v8.h"
@@ -52,4 +52,4 @@ const char* deno_last_exception(Deno* d);
 void deno_dispose(Deno* d);
 void deno_terminate_execution(Deno* d);
 
-#endif  // DENO_H
+#endif  // DENO_H_

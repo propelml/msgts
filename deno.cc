@@ -28,9 +28,9 @@ IN THE SOFTWARE.
 #include "v8/include/libplatform/libplatform.h"
 #include "v8/include/v8.h"
 
-#include "deno.h"
+#include "./deno.h"
 
-#define CHECK(x) assert(x) // TODO use V8's CHECK.
+#define CHECK(x) assert(x)  // TODO(ry) use V8's CHECK.
 
 // Extracts a C string from a v8::V8 Utf8Value.
 const char* ToCString(const v8::String::Utf8Value& value) {
@@ -118,7 +118,7 @@ void Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
 // Sets the recv callback.
 void Recv(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
-  Deno* d = (Deno*)isolate->GetData(0);
+  Deno* d = reinterpret_cast<Deno*>(isolate->GetData(0));
   assert(d->isolate == isolate);
 
   v8::HandleScope handle_scope(isolate);

@@ -1,3 +1,5 @@
+// Copyright 2018 Ryan Dahl <ry@tinyclouds.org>
+// All rights reserved. MIT License.
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,7 +9,7 @@
 
 #include "v8/include/v8.h"
 
-#include "deno.h"
+#include "./deno.h"
 
 class StartupDataCppWriter {
  public:
@@ -39,9 +41,10 @@ class StartupDataCppWriter {
 
   void WriteSuffix() {
     char buffer[500];
-    sprintf(buffer, "const v8::StartupData* StartupBlob_%s() {\n", name_);
+    snprintf(buffer, sizeof(buffer),
+             "const v8::StartupData* StartupBlob_%s() {\n", name_);
     file_ << buffer;
-    sprintf(buffer, "  return &%s_blob;\n", name_);
+    snprintf(buffer, sizeof(buffer), "  return &%s_blob;\n", name_);
     file_ << buffer;
     file_ << "}\n\n";
   }
@@ -51,7 +54,8 @@ class StartupDataCppWriter {
     for (int i = 0; i < sd_.raw_size; i++) {
       if ((i & 0x1F) == 0x1F) file_ << "\n";
       if (i > 0) file_ << ",";
-      sprintf(buffer, "%u", static_cast<unsigned char>(sd_.data[i]));
+      snprintf(buffer, sizeof(buffer), "%u",
+               static_cast<unsigned char>(sd_.data[i]));
       file_ << buffer;
     }
     file_ << "\n";
@@ -59,17 +63,19 @@ class StartupDataCppWriter {
 
   void WriteData() {
     char buffer[500];
-    sprintf(buffer, "static const char %s_blob_data[] = {\n", name_);
+    snprintf(buffer, sizeof(buffer), "static const char %s_blob_data[] = {\n",
+             name_);
     file_ << buffer;
     WriteBinaryContentsAsCArray();
     file_ << "};\n";
-    sprintf(buffer, "static const int %s_blob_size = %d;\n", name_,
-            sd_.raw_size);
+    snprintf(buffer, sizeof(buffer), "static const int %s_blob_size = %d;\n",
+             name_, sd_.raw_size);
     file_ << buffer;
-    sprintf(buffer, "static const v8::StartupData %s_blob =\n", name_);
+    snprintf(buffer, sizeof(buffer), "static const v8::StartupData %s_blob =\n",
+             name_);
     file_ << buffer;
-    sprintf(buffer, "{ (const char*) %s_blob_data, %s_blob_size };\n", name_,
-            name_);
+    snprintf(buffer, sizeof(buffer),
+             "{ (const char*) %s_blob_data, %s_blob_size };\n", name_, name_);
     file_ << buffer;
   }
 

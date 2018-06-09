@@ -1,9 +1,11 @@
+// Copyright 2018 Ryan Dahl <ry@tinyclouds.org>
+// All rights reserved. MIT License.
 #include <assert.h>
 #include <stdio.h>
 
 #include "v8/include/v8.h"
 
-#include "deno.h"
+#include "./deno.h"
 #include "natives_deno.cc"
 #include "snapshot_deno.cc"
 
