@@ -122,3 +122,13 @@ v8_executable("deno") {
     "//build/win:default_exe_manifest",
   ]
 }
+
+executable("deno_cctest") {
+  testonly = true
+  sources = [
+    "cctest.cc",
+  ]
+  deps = [
+    "v8/third_party/googletest:gtest",
+  ]
+}
