@@ -36,7 +36,11 @@ void v8_set_flags(int* argc, char** argv);
 
 // Constructors:
 Worker* worker_new(void* data, RecvCallback cb);
-Worker* worker_from_isolate(v8::Isolate* isolate, void* data, RecvCallback cb);
+Worker* worker_from_snapshot(v8::StartupData* blob, void* data,
+                             RecvCallback cb);
+
+v8::StartupData worker_make_snapshot(const char* js_filename,
+                                     const char* js_source);
 
 void worker_add_isolate(Worker* w, v8::Isolate* isolate);
 void* worker_get_data();

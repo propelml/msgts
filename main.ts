@@ -1,6 +1,7 @@
 const globalEval = eval;
-const window = globalEval(this);
+const window = globalEval("this");
 window['foo'] = () => {
-  //V8Worker2.print("Hello world from main.ts");
+  deno_print("Hello world from foo");
   return "foo";
 }
+

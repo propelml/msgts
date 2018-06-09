@@ -118,35 +118,16 @@ int main(int argc, char** argv) {
   const char* natives_out_cc = argv[4];
   const char* snapshot_out_cc = argv[5];
 
-  auto js_data = ReadFile(js_fn);
-
   v8_init();
 
+  auto js_data = ReadFile(js_fn);
   auto natives_blob = ReadFile(natives_in_bin);
   auto snapshot_in_blob = ReadFile(snapshot_in_bin);
 
   v8::V8::SetNativesDataBlob(&natives_blob);
   v8::V8::SetSnapshotDataBlob(&snapshot_in_blob);
 
-  const intptr_t* external_references = nullptr;
-  auto ssc = new v8::SnapshotCreator(external_references);
-  auto* isolate = ssc->GetIsolate();
-  Worker* w = worker_from_isolate(isolate, nullptr, nullptr);
-
-  int r = worker_load(w, js_fn, js_data.data);
-  assert(r == 0);
-
-  {
-    v8::HandleScope handle_scope(w->isolate);
-    auto context = w->context.Get(w->isolate);
-    ssc->SetDefaultContext(context);
-
-    // Delete our persistant handles.
-    w->context.Reset();
-  }
-
-  auto snapshot_blob =
-      ssc->CreateBlob(v8::SnapshotCreator::FunctionCodeHandling::kKeep);
+  auto snapshot_blob = worker_make_snapshot(js_fn, js_data.data);
 
   StartupDataCppWriter nativesWriter("natives", natives_out_cc, natives_blob);
   nativesWriter.Write();
