@@ -1,10 +1,11 @@
 #include <assert.h>
 #include <stdio.h>
-#include "binding.h"
+
 #include "v8/include/v8.h"
 
 #include "natives_deno.cc"
 #include "snapshot_deno.cc"
+#include "deno.h"
 
 int main(int argc, char** argv) {
   v8_init();

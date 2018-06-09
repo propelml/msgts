@@ -1,12 +1,13 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "binding.h"
-#include "v8/include/v8.h"
-
 #include <fstream>
 #include <iterator>
 #include <vector>
+
+#include "v8/include/v8.h"
+
+#include "deno.h"
 
 class StartupDataCppWriter {
  public:

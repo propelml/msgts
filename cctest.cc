@@ -1,4 +1,4 @@
-#include "binding.h"
+#include "deno.h"
 #include "v8/third_party/googletest/src/googletest/include/gtest/gtest.h"
 
 TEST(SnapshotTest, InitializesCorrectly) {

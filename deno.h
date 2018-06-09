@@ -1,7 +1,7 @@
 // Copyright 2018 Ryan Dahl <ry@tinyclouds.org>
 // All rights reserved. MIT License.
-#ifndef BINDING_H
-#define BINDING_H
+#ifndef DENO_H
+#define DENO_H
 
 #include <string>
 #include "v8/include/v8.h"
@@ -25,10 +25,6 @@ struct deno_s {
   RecvCallback cb;
   void* data;
 };
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 void v8_init();
 const char* v8_version();
@@ -56,7 +52,4 @@ const char* deno_last_exception(Deno* d);
 void deno_dispose(Deno* d);
 void deno_terminate_execution(Deno* d);
 
-#ifdef __cplusplus
-}  // extern "C"
-#endif
-#endif  // BINDING_H
+#endif  // DENO_H

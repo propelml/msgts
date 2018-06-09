@@ -28,7 +28,7 @@ IN THE SOFTWARE.
 #include "v8/include/libplatform/libplatform.h"
 #include "v8/include/v8.h"
 
-#include "binding.h"
+#include "deno.h"
 
 using namespace v8;
 
@@ -172,8 +172,6 @@ void Send(const FunctionCallbackInfo<Value>& args) {
 intptr_t external_references[] = {reinterpret_cast<intptr_t>(Print),
                                   reinterpret_cast<intptr_t>(Recv),
                                   reinterpret_cast<intptr_t>(Send), 0};
-
-extern "C" {
 
 const char* v8_version() { return V8::GetVersion(); }
 
@@ -366,4 +364,3 @@ void deno_dispose(Deno* d) {
 }
 
 void deno_terminate_execution(Deno* d) { d->isolate->TerminateExecution(); }
-}

@@ -88,8 +88,8 @@ create_snapshot("deno") {
 
 v8_executable("snapshot_creator") {
   sources = [
-    "binding.cc",
-    "binding.h",
+    "deno.cc",
+    "deno.h",
     "snapshot_creator.cc",
   ]
   configs = [ "v8:libplatform_config" ]
@@ -105,8 +105,8 @@ v8_executable("snapshot_creator") {
 
 v8_executable("deno") {
   sources = [
-    "binding.cc",
-    "binding.h",
+    "deno.cc",
+    "deno.h",
     "main.cc",
   ]
   include_dirs = [ target_gen_dir ]
