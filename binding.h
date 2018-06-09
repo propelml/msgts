@@ -11,13 +11,13 @@ struct buf_s {
   void* data;
   size_t len;
 };
-typedef struct buf_s WorkerBuf;
-// Worker = Wrapped Isolate.
-struct worker_s;
-typedef struct worker_s Worker;
+typedef struct buf_s DenoBuf;
+// Deno = Wrapped Isolate.
+struct deno_s;
+typedef struct deno_s Deno;
 // The callback from V8 when data is sent.
-typedef WorkerBuf (*RecvCallback)(Worker* w, WorkerBuf buf);
-struct worker_s {
+typedef DenoBuf (*RecvCallback)(Deno* d, DenoBuf buf);
+struct deno_s {
   v8::Isolate* isolate;
   std::string last_exception;
   v8::Persistent<v8::Function> recv;
@@ -35,27 +35,26 @@ const char* v8_version();
 void v8_set_flags(int* argc, char** argv);
 
 // Constructors:
-Worker* worker_new(void* data, RecvCallback cb);
-Worker* worker_from_snapshot(v8::StartupData* blob, void* data,
-                             RecvCallback cb);
+Deno* deno_new(void* data, RecvCallback cb);
+Deno* deno_from_snapshot(v8::StartupData* blob, void* data, RecvCallback cb);
 
-v8::StartupData worker_make_snapshot(const char* js_filename,
-                                     const char* js_source);
+v8::StartupData deno_make_snapshot(const char* js_filename,
+                                   const char* js_source);
 
-void worker_add_isolate(Worker* w, v8::Isolate* isolate);
-void* worker_get_data();
-
-// Returns nonzero on error.
-// Get error text with worker_last_exception().
-int worker_load(Worker* w, const char* name_s, const char* source_s);
+void deno_add_isolate(Deno* d, v8::Isolate* isolate);
+void* deno_get_data();
 
 // Returns nonzero on error.
-int worker_send(Worker* w, WorkerBuf buf);
+// Get error text with deno_last_exception().
+int deno_load(Deno* d, const char* name_s, const char* source_s);
 
-const char* worker_last_exception(Worker* w);
+// Returns nonzero on error.
+int deno_send(Deno* d, DenoBuf buf);
 
-void worker_dispose(Worker* w);
-void worker_terminate_execution(Worker* w);
+const char* deno_last_exception(Deno* d);
+
+void deno_dispose(Deno* d);
+void deno_terminate_execution(Deno* d);
 
 #ifdef __cplusplus
 }  // extern "C"

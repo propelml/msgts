@@ -127,7 +127,7 @@ int main(int argc, char** argv) {
   v8::V8::SetNativesDataBlob(&natives_blob);
   v8::V8::SetSnapshotDataBlob(&snapshot_in_blob);
 
-  auto snapshot_blob = worker_make_snapshot(js_fn, js_data.data);
+  auto snapshot_blob = deno_make_snapshot(js_fn, js_data.data);
 
   StartupDataCppWriter nativesWriter("natives", natives_out_cc, natives_blob);
   nativesWriter.Write();

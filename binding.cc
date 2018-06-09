@@ -50,13 +50,13 @@ static inline v8::Local<v8::String> v8_str(const char* x) {
 }
 
 // Exits the process.
-void HandleException(Worker* w, Local<Value> exception) {
-  HandleScope handle_scope(w->isolate);
-  auto context = w->context.Get(w->isolate);
+void HandleException(Deno* d, Local<Value> exception) {
+  HandleScope handle_scope(d->isolate);
+  auto context = d->context.Get(d->isolate);
   Context::Scope context_scope(context);
 
-  auto message = Exception::CreateMessage(w->isolate, exception);
-  auto onerrorStr = String::NewFromUtf8(w->isolate, "onerror");
+  auto message = Exception::CreateMessage(d->isolate, exception);
+  auto onerrorStr = String::NewFromUtf8(d->isolate, "onerror");
   auto onerror = context->Global()->Get(onerrorStr);
 
   if (onerror->IsFunction()) {
@@ -71,9 +71,9 @@ void HandleException(Worker* w, Local<Value> exception) {
     func->Call(context->Global(), 5, args);
     /* message, source, lineno, colno, error */
   } else {
-    String::Utf8Value exceptionStr(w->isolate, exception);
+    String::Utf8Value exceptionStr(d->isolate, exception);
     printf("Unhandled Exception %s\n", ToCString(exceptionStr));
-    message->PrintCurrentStackTrace(w->isolate, stdout);
+    message->PrintCurrentStackTrace(d->isolate, stdout);
   }
 
   exit(1);
@@ -95,11 +95,11 @@ void FatalErrorCallback2(const char* location, const char* message) {
 
 void ExitOnPromiseRejectCallback(PromiseRejectMessage promise_reject_message) {
   auto* isolate = Isolate::GetCurrent();
-  Worker* w = static_cast<Worker*>(isolate->GetData(0));
-  assert(w->isolate == isolate);
-  HandleScope handle_scope(w->isolate);
+  Deno* d = static_cast<Deno*>(isolate->GetData(0));
+  assert(d->isolate == isolate);
+  HandleScope handle_scope(d->isolate);
   auto exception = promise_reject_message.GetValue();
-  HandleException(w, exception);
+  HandleException(d, exception);
 }
 
 void Print(const FunctionCallbackInfo<Value>& args) {
@@ -123,8 +123,8 @@ void Print(const FunctionCallbackInfo<Value>& args) {
 // Sets the recv callback.
 void Recv(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
-  Worker* w = (Worker*)isolate->GetData(0);
-  assert(w->isolate == isolate);
+  Deno* d = (Deno*)isolate->GetData(0);
+  assert(d->isolate == isolate);
 
   HandleScope handle_scope(isolate);
 
@@ -132,16 +132,16 @@ void Recv(const FunctionCallbackInfo<Value>& args) {
   assert(v->IsFunction());
   Local<Function> func = Local<Function>::Cast(v);
 
-  w->recv.Reset(isolate, func);
+  d->recv.Reset(isolate, func);
 }
 
 // Called from JavaScript, routes message to golang.
 void Send(const FunctionCallbackInfo<Value>& args) {
   Isolate* isolate = args.GetIsolate();
-  Worker* w = static_cast<Worker*>(isolate->GetData(0));
-  assert(w->isolate == isolate);
+  Deno* d = static_cast<Deno*>(isolate->GetData(0));
+  assert(d->isolate == isolate);
 
-  Locker locker(w->isolate);
+  Locker locker(d->isolate);
   EscapableHandleScope handle_scope(isolate);
 
   Local<Value> v = args[0];
@@ -153,14 +153,14 @@ void Send(const FunctionCallbackInfo<Value>& args) {
   void* buf = contents.Data();
   int buflen = static_cast<int>(contents.ByteLength());
 
-  auto retbuf = w->cb(w, WorkerBuf{buf, buflen});
+  auto retbuf = d->cb(d, DenoBuf{buf, buflen});
   if (retbuf.data) {
-    auto ab = ArrayBuffer::New(w->isolate, retbuf.data, retbuf.len,
+    auto ab = ArrayBuffer::New(d->isolate, retbuf.data, retbuf.len,
                                ArrayBufferCreationMode::kInternalized);
     /*
     // I'm slightly worried the above ArrayBuffer construction leaks memory
     // the following might be a safer way to do it.
-    auto ab = ArrayBuffer::New(w->isolate, retbuf.len);
+    auto ab = ArrayBuffer::New(d->isolate, retbuf.len);
     auto contents = ab->GetContents();
     memcpy(contents.Data(), retbuf.data, retbuf.len);
     free(retbuf.data);
@@ -181,22 +181,20 @@ void v8_set_flags(int* argc, char** argv) {
   V8::SetFlagsFromCommandLine(argc, argv, true);
 }
 
-const char* worker_last_exception(Worker* w) {
-  return w->last_exception.c_str();
-}
+const char* deno_last_exception(Deno* d) { return d->last_exception.c_str(); }
 
-int worker_load(Worker* w, const char* name_s, const char* source_s) {
-  Locker locker(w->isolate);
-  Isolate::Scope isolate_scope(w->isolate);
-  HandleScope handle_scope(w->isolate);
+int deno_load(Deno* d, const char* name_s, const char* source_s) {
+  Locker locker(d->isolate);
+  Isolate::Scope isolate_scope(d->isolate);
+  HandleScope handle_scope(d->isolate);
 
-  auto context = w->context.Get(w->isolate);
+  auto context = d->context.Get(d->isolate);
   Context::Scope context_scope(context);
 
-  TryCatch try_catch(w->isolate);
+  TryCatch try_catch(d->isolate);
 
-  Local<String> name = String::NewFromUtf8(w->isolate, name_s);
-  Local<String> source = String::NewFromUtf8(w->isolate, source_s);
+  Local<String> name = String::NewFromUtf8(d->isolate, name_s);
+  Local<String> source = String::NewFromUtf8(d->isolate, source_s);
 
   ScriptOrigin origin(name);
 
@@ -204,7 +202,7 @@ int worker_load(Worker* w, const char* name_s, const char* source_s) {
 
   if (script.IsEmpty()) {
     assert(try_catch.HasCaught());
-    HandleException(w, try_catch.Exception());
+    HandleException(d, try_catch.Exception());
     assert(false);
     return 1;
   }
@@ -213,7 +211,7 @@ int worker_load(Worker* w, const char* name_s, const char* source_s) {
 
   if (result.IsEmpty()) {
     assert(try_catch.HasCaught());
-    HandleException(w, try_catch.Exception());
+    HandleException(d, try_catch.Exception());
     assert(false);
     return 2;
   }
@@ -222,25 +220,25 @@ int worker_load(Worker* w, const char* name_s, const char* source_s) {
 }
 
 // Called from golang. Must route message to javascript lang.
-// non-zero return value indicates error. check worker_last_exception().
-int worker_send(Worker* w, WorkerBuf buf) {
-  Locker locker(w->isolate);
-  Isolate::Scope isolate_scope(w->isolate);
-  HandleScope handle_scope(w->isolate);
+// non-zero return value indicates error. check deno_last_exception().
+int deno_send(Deno* d, DenoBuf buf) {
+  Locker locker(d->isolate);
+  Isolate::Scope isolate_scope(d->isolate);
+  HandleScope handle_scope(d->isolate);
 
-  auto context = w->context.Get(w->isolate);
+  auto context = d->context.Get(d->isolate);
   Context::Scope context_scope(context);
 
-  TryCatch try_catch(w->isolate);
+  TryCatch try_catch(d->isolate);
 
-  Local<Function> recv = Local<Function>::New(w->isolate, w->recv);
+  Local<Function> recv = Local<Function>::New(d->isolate, d->recv);
   if (recv.IsEmpty()) {
-    w->last_exception = "V8Worker2.recv has not been called.";
+    d->last_exception = "V8Deno2.recv has not been called.";
     return 1;
   }
 
   Local<Value> args[1];
-  args[0] = ArrayBuffer::New(w->isolate, buf.data, buf.len,
+  args[0] = ArrayBuffer::New(d->isolate, buf.data, buf.len,
                              ArrayBufferCreationMode::kInternalized);
   assert(!args[0].IsEmpty());
   assert(!try_catch.HasCaught());
@@ -248,7 +246,7 @@ int worker_send(Worker* w, WorkerBuf buf) {
   recv->Call(context->Global(), 1, args);
 
   if (try_catch.HasCaught()) {
-    HandleException(w, try_catch.Exception());
+    HandleException(d, try_catch.Exception());
     return 2;
   }
 
@@ -263,49 +261,48 @@ void v8_init() {
   V8::Initialize();
 }
 
-Worker* worker_new(void* data, RecvCallback cb) {
-  Worker* w = new Worker;
-  w->cb = cb;
-  w->data = data;
+Deno* deno_new(void* data, RecvCallback cb) {
+  Deno* d = new Deno;
+  d->cb = cb;
+  d->data = data;
   Isolate::CreateParams params;
   params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
   Isolate* isolate = Isolate::New(params);
-  worker_add_isolate(w, isolate);
-  return w;
+  deno_add_isolate(d, isolate);
+  return d;
 }
 
-Worker* worker_from_snapshot(v8::StartupData* blob, void* data,
-                             RecvCallback cb) {
-  Worker* w = new Worker;
-  w->cb = cb;
-  w->data = data;
+Deno* deno_from_snapshot(v8::StartupData* blob, void* data, RecvCallback cb) {
+  Deno* d = new Deno;
+  d->cb = cb;
+  d->data = data;
   Isolate::CreateParams params;
   params.snapshot_blob = blob;
   params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
   params.external_references = external_references;
   Isolate* isolate = Isolate::New(params);
-  worker_add_isolate(w, isolate);
+  deno_add_isolate(d, isolate);
 
   Isolate::Scope isolate_scope(isolate);
   {
     HandleScope handle_scope(isolate);
     auto context = v8::Context::New(isolate);
-    w->context.Reset(w->isolate, context);
+    d->context.Reset(d->isolate, context);
   }
 
-  return w;
+  return d;
 }
 
-void worker_add_isolate(Worker* w, Isolate* isolate) {
-  w->isolate = isolate;
+void deno_add_isolate(Deno* d, Isolate* isolate) {
+  d->isolate = isolate;
   // Leaving this code here because it will probably be useful later on, but
   // disabling it now as I haven't got tests for the desired behavior.
-  // w->isolate->SetCaptureStackTraceForUncaughtExceptions(true);
-  // w->isolate->SetAbortOnUncaughtExceptionCallback(AbortOnUncaughtExceptionCallback);
-  // w->isolate->AddMessageListener(MessageCallback2);
-  // w->isolate->SetFatalErrorHandler(FatalErrorCallback2);
-  w->isolate->SetPromiseRejectCallback(ExitOnPromiseRejectCallback);
-  w->isolate->SetData(0, w);
+  // d->isolate->SetCaptureStackTraceForUncaughtExceptions(true);
+  // d->isolate->SetAbortOnUncaughtExceptionCallback(AbortOnUncaughtExceptionCallback);
+  // d->isolate->AddMessageListener(MessageCallback2);
+  // d->isolate->SetFatalErrorHandler(FatalErrorCallback2);
+  d->isolate->SetPromiseRejectCallback(ExitOnPromiseRejectCallback);
+  d->isolate->SetData(0, d);
 }
 
 v8::StartupData SerializeInternalField(v8::Local<v8::Object> holder, int index,
@@ -317,22 +314,22 @@ v8::StartupData SerializeInternalField(v8::Local<v8::Object> holder, int index,
   return sd;
 }
 
-v8::StartupData worker_make_snapshot(const char* js_filename,
-                                     const char* js_source) {
+v8::StartupData deno_make_snapshot(const char* js_filename,
+                                   const char* js_source) {
   auto creator = new v8::SnapshotCreator(external_references);
   auto* isolate = creator->GetIsolate();
 
-  Worker* w = new Worker;
-  worker_add_isolate(w, isolate);
+  Deno* d = new Deno;
+  deno_add_isolate(d, isolate);
 
   Isolate::Scope isolate_scope(isolate);
   {
     HandleScope handle_scope(isolate);
 
-    Local<Context> context = Context::New(w->isolate);
+    Local<Context> context = Context::New(d->isolate);
     Context::Scope context_scope(context);
 
-    w->context.Reset(w->isolate, context);
+    d->context.Reset(d->isolate, context);
 
     auto global = context->Global();
 
@@ -351,11 +348,11 @@ v8::StartupData worker_make_snapshot(const char* js_filename,
     creator->SetDefaultContext(context);
   }
 
-  int r = worker_load(w, js_filename, js_source);
+  int r = deno_load(d, js_filename, js_source);
   assert(r == 0);
 
-  w->context.Reset();  // Delete persistant handles.
-  w->recv.Reset();     // Delete persistant handles.
+  d->context.Reset();  // Delete persistant handles.
+  d->recv.Reset();     // Delete persistant handles.
 
   auto snapshot_blob =
       creator->CreateBlob(v8::SnapshotCreator::FunctionCodeHandling::kKeep);
@@ -363,10 +360,10 @@ v8::StartupData worker_make_snapshot(const char* js_filename,
   return snapshot_blob;
 }
 
-void worker_dispose(Worker* w) {
-  w->isolate->Dispose();
-  delete (w);
+void deno_dispose(Deno* d) {
+  d->isolate->Dispose();
+  delete (d);
 }
 
-void worker_terminate_execution(Worker* w) { w->isolate->TerminateExecution(); }
+void deno_terminate_execution(Deno* d) { d->isolate->TerminateExecution(); }
 }
