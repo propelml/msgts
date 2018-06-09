@@ -7,7 +7,7 @@ import sys
 import subprocess
 import argparse
 
-TARGET = "xhello"
+TARGET = "deno"
 
 parser = argparse.ArgumentParser(description="build.py")
 parser.add_argument('--debug', dest='debug', action='store_true')
@@ -26,23 +26,22 @@ def main():
 
     # Run gn gen out/Default if out doesn't exist.
     if not os.path.exists(buildDir):
-        gn_gen = "gn gen " + buildDir
+        gn_gen = ["gn", "gen", buildDir]
         gn_args = []
         if args.debug:
             gn_args.append("is_debug=true")
         if args.use_ccache:
-            gn_args.append("cc_wraper=\"ccache\"")
+            gn_args.append("cc_wrapper=\"ccache\"")
         if len(gn_args) > 0:
-            gn_gen += " --args='%s' " % " ".join(gn_args)
+            gn_gen += ["--args=%s" % " ".join(gn_args)]
         run(gn_gen)
 
     # Always run ninja.
-    run("ninja -C " + buildDir + " " + TARGET)
+    run(["ninja", "-C", buildDir, TARGET])
 
 
-def run(cmd):
-    print cmd
-    args = cmd.split(" ")
+def run(args):
+    print " ".join(args)
     env = os.environ.copy()
     subprocess.check_call(args, env=env)
 

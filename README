@@ -3,24 +3,27 @@
 Get Depot Tools and make sure it's in your path.
 http://commondatastorage.googleapis.com/chrome-infra-docs/flat/depot_tools/docs/html/depot_tools_tutorial.html#_setting_up
 
-And For linux:
-sudo apt-get install libgtk-3-dev pkg-config ccache
+For linux you need these prereqs:
+
+    sudo apt-get install libgtk-3-dev pkg-config ccache
+
 
 ## Build
 
-./build.py # my wrapper around the gclient/gn/ninja
+Wrapper around the gclient/gn/ninja for end users. Try this first:
 
-If that doesn't work try calling gn manually:
+    ./build.py
 
-gn gen out/Debug --args='cc_wrapper="ccache" is_debug=true '
-gn gen out/Default --args='cc_wrapper="ccache" '
+If that doesn't work, or you need more control, try calling gn manually:
+
+    gn gen out/Debug --args='cc_wrapper="ccache" is_debug=true '
 
 Then build with ninja:
 
-ninja -C out/Debug/ xhello # Build
+    ninja -C out/Debug/ deno
 
 
-## Debugging
+Other useful commands:
 
-gn args out/Default/ --list # List build args
-gn args out/Default/ # Modify args in $EDITOR
+    gn args out/Debug/ --list # List build args
+    gn args out/Debug/ # Modify args in $EDITOR
