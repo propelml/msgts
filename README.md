@@ -12,7 +12,7 @@ For linux you need these prereqs:
 
 Wrapper around the gclient/gn/ninja for end users. Try this first:
 
-    ./build.py
+    ./tools/build.py --use_ccache --debug
 
 If that doesn't work, or you need more control, try calling gn manually:
 

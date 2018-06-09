@@ -16,9 +16,13 @@ parser.add_argument('--sync', dest='sync', action='store_true')
 parser.set_defaults(debug=False, use_ccache=False, sync=False)
 args = parser.parse_args()
 
+root_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
 
 def main():
-    buildDir = "out/Debug" if args.debug else "out/Default"
+    os.chdir(root_path)
+    buildName = "Debug" if args.debug else "Default"
+    buildDir = os.path.join(root_path, "out", buildName)
     # Run sync if any of the dep dirs don't exist.
     # Or the user supplied the --sync flag.
     if args.sync or dirsMissing():

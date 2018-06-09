@@ -3,9 +3,9 @@
 
 #include "v8/include/v8.h"
 
+#include "deno.h"
 #include "natives_deno.cc"
 #include "snapshot_deno.cc"
-#include "deno.h"
 
 int main(int argc, char** argv) {
   v8_init();
