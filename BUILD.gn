@@ -57,6 +57,9 @@ template("create_snapshot") {
     snapshot_in_bin = "$root_out_dir/snapshot_blob.bin"
     natives_out_cc = "$target_gen_dir/natives${suffix}.cc"
     snapshot_out_cc = "$target_gen_dir/snapshot${suffix}.cc"
+    sources = [
+      invoker.js,
+    ]
     outputs = [
       natives_out_cc,
       snapshot_out_cc,
