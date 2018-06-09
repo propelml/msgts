@@ -30,16 +30,10 @@ IN THE SOFTWARE.
 
 #include "deno.h"
 
-using namespace v8;
+#define CHECK(x) assert(x) // TODO use V8's CHECK.
 
-// TODO use V8's CHECK.
-#define CHECK(x) \
-  if (!(x)) {    \
-    exit(42);    \
-  }
-
-// Extracts a C string from a V8 Utf8Value.
-const char* ToCString(const String::Utf8Value& value) {
+// Extracts a C string from a v8::V8 Utf8Value.
+const char* ToCString(const v8::String::Utf8Value& value) {
   return *value ? *value : "<string conversion failed>";
 }
 
@@ -50,18 +44,18 @@ static inline v8::Local<v8::String> v8_str(const char* x) {
 }
 
 // Exits the process.
-void HandleException(Deno* d, Local<Value> exception) {
-  HandleScope handle_scope(d->isolate);
+void HandleException(Deno* d, v8::Local<v8::Value> exception) {
+  v8::HandleScope handle_scope(d->isolate);
   auto context = d->context.Get(d->isolate);
-  Context::Scope context_scope(context);
+  v8::Context::Scope context_scope(context);
 
-  auto message = Exception::CreateMessage(d->isolate, exception);
-  auto onerrorStr = String::NewFromUtf8(d->isolate, "onerror");
+  auto message = v8::Exception::CreateMessage(d->isolate, exception);
+  auto onerrorStr = v8::String::NewFromUtf8(d->isolate, "onerror");
   auto onerror = context->Global()->Get(onerrorStr);
 
   if (onerror->IsFunction()) {
-    Local<Function> func = Local<Function>::Cast(onerror);
-    Local<Value> args[5];
+    auto func = v8::Local<v8::Function>::Cast(onerror);
+    v8::Local<v8::Value> args[5];
     auto origin = message->GetScriptOrigin();
     args[0] = exception->ToString();
     args[1] = message->GetScriptResourceName();
@@ -71,7 +65,7 @@ void HandleException(Deno* d, Local<Value> exception) {
     func->Call(context->Global(), 5, args);
     /* message, source, lineno, colno, error */
   } else {
-    String::Utf8Value exceptionStr(d->isolate, exception);
+    v8::String::Utf8Value exceptionStr(d->isolate, exception);
     printf("Unhandled Exception %s\n", ToCString(exceptionStr));
     message->PrintCurrentStackTrace(d->isolate, stdout);
   }
@@ -80,11 +74,11 @@ void HandleException(Deno* d, Local<Value> exception) {
 }
 
 /*
-bool AbortOnUncaughtExceptionCallback(Isolate* isolate) {
+bool AbortOnUncaughtExceptionCallback(v8::Isolate* isolate) {
   return true;
 }
 
-void MessageCallback2(Local<Message> message, Local<Value> data) {
+void MessageCallback2(Local<Message> message, v8::Local<v8::Value> data) {
   printf("MessageCallback2\n\n");
 }
 
@@ -93,26 +87,27 @@ void FatalErrorCallback2(const char* location, const char* message) {
 }
 */
 
-void ExitOnPromiseRejectCallback(PromiseRejectMessage promise_reject_message) {
-  auto* isolate = Isolate::GetCurrent();
+void ExitOnPromiseRejectCallback(
+    v8::PromiseRejectMessage promise_reject_message) {
+  auto* isolate = v8::Isolate::GetCurrent();
   Deno* d = static_cast<Deno*>(isolate->GetData(0));
   assert(d->isolate == isolate);
-  HandleScope handle_scope(d->isolate);
+  v8::HandleScope handle_scope(d->isolate);
   auto exception = promise_reject_message.GetValue();
   HandleException(d, exception);
 }
 
-void Print(const FunctionCallbackInfo<Value>& args) {
+void Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
   bool first = true;
   auto* isolate = args.GetIsolate();
   for (int i = 0; i < args.Length(); i++) {
-    HandleScope handle_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
     if (first) {
       first = false;
     } else {
       printf(" ");
     }
-    String::Utf8Value str(isolate, args[i]);
+    v8::String::Utf8Value str(isolate, args[i]);
     const char* cstr = ToCString(str);
     printf("%s", cstr);
   }
@@ -121,33 +116,33 @@ void Print(const FunctionCallbackInfo<Value>& args) {
 }
 
 // Sets the recv callback.
-void Recv(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = args.GetIsolate();
+void Recv(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  v8::Isolate* isolate = args.GetIsolate();
   Deno* d = (Deno*)isolate->GetData(0);
   assert(d->isolate == isolate);
 
-  HandleScope handle_scope(isolate);
+  v8::HandleScope handle_scope(isolate);
 
-  Local<Value> v = args[0];
+  v8::Local<v8::Value> v = args[0];
   assert(v->IsFunction());
-  Local<Function> func = Local<Function>::Cast(v);
+  v8::Local<v8::Function> func = v8::Local<v8::Function>::Cast(v);
 
   d->recv.Reset(isolate, func);
 }
 
 // Called from JavaScript, routes message to golang.
-void Send(const FunctionCallbackInfo<Value>& args) {
-  Isolate* isolate = args.GetIsolate();
+void Send(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  v8::Isolate* isolate = args.GetIsolate();
   Deno* d = static_cast<Deno*>(isolate->GetData(0));
   assert(d->isolate == isolate);
 
-  Locker locker(d->isolate);
-  EscapableHandleScope handle_scope(isolate);
+  v8::Locker locker(d->isolate);
+  v8::EscapableHandleScope handle_scope(isolate);
 
-  Local<Value> v = args[0];
+  v8::Local<v8::Value> v = args[0];
   assert(v->IsArrayBuffer());
 
-  auto ab = Local<ArrayBuffer>::Cast(v);
+  auto ab = v8::Local<v8::ArrayBuffer>::Cast(v);
   auto contents = ab->GetContents();
 
   void* buf = contents.Data();
@@ -155,12 +150,12 @@ void Send(const FunctionCallbackInfo<Value>& args) {
 
   auto retbuf = d->cb(d, DenoBuf{buf, buflen});
   if (retbuf.data) {
-    auto ab = ArrayBuffer::New(d->isolate, retbuf.data, retbuf.len,
-                               ArrayBufferCreationMode::kInternalized);
+    auto ab = v8::ArrayBuffer::New(d->isolate, retbuf.data, retbuf.len,
+                                   v8::ArrayBufferCreationMode::kInternalized);
     /*
-    // I'm slightly worried the above ArrayBuffer construction leaks memory
+    // I'm slightly worried the above v8::ArrayBuffer construction leaks memory
     // the following might be a safer way to do it.
-    auto ab = ArrayBuffer::New(d->isolate, retbuf.len);
+    auto ab = v8::ArrayBuffer::New(d->isolate, retbuf.len);
     auto contents = ab->GetContents();
     memcpy(contents.Data(), retbuf.data, retbuf.len);
     free(retbuf.data);
@@ -173,30 +168,30 @@ intptr_t external_references[] = {reinterpret_cast<intptr_t>(Print),
                                   reinterpret_cast<intptr_t>(Recv),
                                   reinterpret_cast<intptr_t>(Send), 0};
 
-const char* v8_version() { return V8::GetVersion(); }
+const char* v8_version() { return v8::V8::GetVersion(); }
 
 void v8_set_flags(int* argc, char** argv) {
-  V8::SetFlagsFromCommandLine(argc, argv, true);
+  v8::V8::SetFlagsFromCommandLine(argc, argv, true);
 }
 
 const char* deno_last_exception(Deno* d) { return d->last_exception.c_str(); }
 
 int deno_load(Deno* d, const char* name_s, const char* source_s) {
-  Locker locker(d->isolate);
-  Isolate::Scope isolate_scope(d->isolate);
-  HandleScope handle_scope(d->isolate);
+  v8::Locker locker(d->isolate);
+  v8::Isolate::Scope isolate_scope(d->isolate);
+  v8::HandleScope handle_scope(d->isolate);
 
   auto context = d->context.Get(d->isolate);
-  Context::Scope context_scope(context);
+  v8::Context::Scope context_scope(context);
 
-  TryCatch try_catch(d->isolate);
+  v8::TryCatch try_catch(d->isolate);
 
-  Local<String> name = String::NewFromUtf8(d->isolate, name_s);
-  Local<String> source = String::NewFromUtf8(d->isolate, source_s);
+  auto name = v8_str(name_s);
+  auto source = v8_str(source_s);
 
-  ScriptOrigin origin(name);
+  v8::ScriptOrigin origin(name);
 
-  MaybeLocal<Script> script = Script::Compile(context, source, &origin);
+  auto script = v8::Script::Compile(context, source, &origin);
 
   if (script.IsEmpty()) {
     assert(try_catch.HasCaught());
@@ -205,7 +200,7 @@ int deno_load(Deno* d, const char* name_s, const char* source_s) {
     return 1;
   }
 
-  MaybeLocal<Value> result = script.ToLocalChecked()->Run(context);
+  auto result = script.ToLocalChecked()->Run(context);
 
   if (result.IsEmpty()) {
     assert(try_catch.HasCaught());
@@ -220,24 +215,25 @@ int deno_load(Deno* d, const char* name_s, const char* source_s) {
 // Called from golang. Must route message to javascript lang.
 // non-zero return value indicates error. check deno_last_exception().
 int deno_send(Deno* d, DenoBuf buf) {
-  Locker locker(d->isolate);
-  Isolate::Scope isolate_scope(d->isolate);
-  HandleScope handle_scope(d->isolate);
+  v8::Locker locker(d->isolate);
+  v8::Isolate::Scope isolate_scope(d->isolate);
+  v8::HandleScope handle_scope(d->isolate);
 
   auto context = d->context.Get(d->isolate);
-  Context::Scope context_scope(context);
+  v8::Context::Scope context_scope(context);
 
-  TryCatch try_catch(d->isolate);
+  v8::TryCatch try_catch(d->isolate);
 
-  Local<Function> recv = Local<Function>::New(d->isolate, d->recv);
+  v8::Local<v8::Function> recv =
+      v8::Local<v8::Function>::New(d->isolate, d->recv);
   if (recv.IsEmpty()) {
     d->last_exception = "V8Deno2.recv has not been called.";
     return 1;
   }
 
-  Local<Value> args[1];
-  args[0] = ArrayBuffer::New(d->isolate, buf.data, buf.len,
-                             ArrayBufferCreationMode::kInternalized);
+  v8::Local<v8::Value> args[1];
+  args[0] = v8::ArrayBuffer::New(d->isolate, buf.data, buf.len,
+                                 v8::ArrayBufferCreationMode::kInternalized);
   assert(!args[0].IsEmpty());
   assert(!try_catch.HasCaught());
 
@@ -252,20 +248,21 @@ int deno_send(Deno* d, DenoBuf buf) {
 }
 
 void v8_init() {
-  // V8::InitializeICUDefaultLocation(argv[0]);
-  // V8::InitializeExternalStartupData(argv[0]);
-  auto p = platform::CreateDefaultPlatform();
-  V8::InitializePlatform(p);
-  V8::Initialize();
+  // v8::V8::InitializeICUDefaultLocation(argv[0]);
+  // v8::V8::InitializeExternalStartupData(argv[0]);
+  auto p = v8::platform::CreateDefaultPlatform();
+  v8::V8::InitializePlatform(p);
+  v8::V8::Initialize();
 }
 
 Deno* deno_new(void* data, RecvCallback cb) {
   Deno* d = new Deno;
   d->cb = cb;
   d->data = data;
-  Isolate::CreateParams params;
-  params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
-  Isolate* isolate = Isolate::New(params);
+  v8::Isolate::CreateParams params;
+  params.array_buffer_allocator =
+      v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+  v8::Isolate* isolate = v8::Isolate::New(params);
   deno_add_isolate(d, isolate);
   return d;
 }
@@ -274,16 +271,17 @@ Deno* deno_from_snapshot(v8::StartupData* blob, void* data, RecvCallback cb) {
   Deno* d = new Deno;
   d->cb = cb;
   d->data = data;
-  Isolate::CreateParams params;
+  v8::Isolate::CreateParams params;
   params.snapshot_blob = blob;
-  params.array_buffer_allocator = ArrayBuffer::Allocator::NewDefaultAllocator();
+  params.array_buffer_allocator =
+      v8::ArrayBuffer::Allocator::NewDefaultAllocator();
   params.external_references = external_references;
-  Isolate* isolate = Isolate::New(params);
+  v8::Isolate* isolate = v8::Isolate::New(params);
   deno_add_isolate(d, isolate);
 
-  Isolate::Scope isolate_scope(isolate);
+  v8::Isolate::Scope isolate_scope(isolate);
   {
-    HandleScope handle_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
     auto context = v8::Context::New(isolate);
     d->context.Reset(d->isolate, context);
   }
@@ -291,7 +289,7 @@ Deno* deno_from_snapshot(v8::StartupData* blob, void* data, RecvCallback cb) {
   return d;
 }
 
-void deno_add_isolate(Deno* d, Isolate* isolate) {
+void deno_add_isolate(Deno* d, v8::Isolate* isolate) {
   d->isolate = isolate;
   // Leaving this code here because it will probably be useful later on, but
   // disabling it now as I haven't got tests for the desired behavior.
@@ -320,12 +318,12 @@ v8::StartupData deno_make_snapshot(const char* js_filename,
   Deno* d = new Deno;
   deno_add_isolate(d, isolate);
 
-  Isolate::Scope isolate_scope(isolate);
+  v8::Isolate::Scope isolate_scope(isolate);
   {
-    HandleScope handle_scope(isolate);
+    v8::HandleScope handle_scope(isolate);
 
-    Local<Context> context = Context::New(d->isolate);
-    Context::Scope context_scope(context);
+    v8::Local<v8::Context> context = v8::Context::New(d->isolate);
+    v8::Context::Scope context_scope(context);
 
     d->context.Reset(d->isolate, context);
 
